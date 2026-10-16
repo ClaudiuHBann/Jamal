@@ -172,6 +172,23 @@ Lavalink's downloaded plugins live in a named Docker volume and remain available
 - **TV fails with `Must find sig function`:** the built-in YouTube signature parser cannot process the current player script. Use the current Compose and Lavalink configuration together so the private yt-cipher service handles deciphering. See the [cipher deployment guide](deploy/YOUTUBE.md).
 - **Queue disappears:** departures and bot restarts intentionally end the in-memory session.
 
+## Docker images from GitHub Actions
+
+The [Build Docker image workflow](.github/workflows/docker-image.yml) builds the bot's Linux `amd64` image on pushes to any branch containing the workflow. It can also run manually: open **Actions → Build Docker image → Run workflow**, select the branch, and click **Run workflow**. [GitHub's manual workflow instructions](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow)
+
+Each successful run provides a downloadable `discord-music-bot-image.tar.gz` artifact, retained for 14 days. The image has both the `discord-music-bot:ci` tag and a tag containing the full Git commit SHA. The workflow builds from `Dockerfile` and caches build layers. No bot credentials are needed for the build.
+
+To update an existing deployment, download the image archive from the completed run and copy it into the server directory containing `compose.yml` and `.env`. From that directory, run:
+
+```sh
+sudo docker load -i discord-music-bot-image.tar.gz &&
+sed -i '/^BOT_IMAGE_TAG=/d' .env &&
+printf '\nBOT_IMAGE_TAG=ci\n' >> .env &&
+sudo docker compose up -d --no-deps --force-recreate bot
+```
+
+This keeps the existing runtime credentials and Lavalink/cipher configuration. Restarting the bot clears the current playback session and queue. The workflow exports the bot image; the Compose files continue to use the published Lavalink and cipher images.
+
 ## Versions and maintenance
 
 To export a prebuilt Linux/amd64 image and a minimal production bundle on this PC, run this with PowerShell 7.4 or newer and the .NET 10 SDK:
