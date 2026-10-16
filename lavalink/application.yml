@@ -1,0 +1,55 @@
+server:
+  port: 2333
+  address: 0.0.0.0
+
+lavalink:
+  plugins:
+    # Pinned upstream build includes TV and IOS fixes missing from stable 1.18.2.
+    - dependency: dev.lavalink.youtube:youtube-plugin:2be8e542d3f6f178e048dca565892684c2e40177
+      repository: https://maven.lavalink.dev/snapshots
+      snapshot: true
+  server:
+    # Overridden by LAVALINK_SERVER_PASSWORD in Compose.
+    password: ${LAVALINK_SERVER_PASSWORD}
+    sources:
+      youtube: false
+      soundcloud: false
+      bandcamp: false
+      twitch: false
+      vimeo: false
+      nico: false
+      http: false
+      local: false
+    bufferDurationMs: 400
+    frameBufferDurationMs: 5000
+    trackStuckThresholdMs: 10000
+    timeouts:
+      connectTimeoutMs: 10000
+      connectionRequestTimeoutMs: 10000
+      socketTimeoutMs: 20000
+
+plugins:
+  youtube:
+    enabled: true
+    allowSearch: true
+    allowDirectVideoIds: false
+    allowDirectPlaylistIds: false
+    # Decipher current YouTube player scripts through our private container.
+    remoteCipher:
+      url: http://yt-cipher:8001
+      password: ${LAVALINK_SERVER_PASSWORD}
+      userAgent: DiscordMusicBot
+    clients:
+      # WEB searches before IOS, whose empty response can stop fallback.
+      - WEB
+      - MUSIC
+      - IOS
+      - ANDROID_VR
+      - WEBEMBEDDED
+
+logging:
+  level:
+    root: INFO
+    lavalink: INFO
+  request:
+    enabled: false

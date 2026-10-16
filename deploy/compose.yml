@@ -1,0 +1,83 @@
+services:
+  bot:
+    image: discord-music-bot:${BOT_IMAGE_TAG:-1.1.2}
+    platform: linux/amd64
+    pull_policy: never
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      Discord__Token: ${DISCORD_TOKEN:?Set DISCORD_TOKEN in .env}
+      Discord__GuildId: ${DISCORD_GUILD_ID:-}
+      Lavalink__BaseAddress: http://lavalink:2333
+      Lavalink__Passphrase: ${LAVALINK_PASSWORD:?Set LAVALINK_PASSWORD in .env}
+      DOTNET_ENVIRONMENT: Production
+    depends_on:
+      lavalink:
+        condition: service_started
+
+  yt-cipher:
+    # Published master image, pinned to the verified multi-platform digest.
+    image: ghcr.io/kikkia/yt-cipher:master@sha256:4c5ec381ff57336cfc24822d2b526a5ad7cd0171f61065a1bbc87bb736842449
+    platform: linux/amd64
+    restart: unless-stopped
+    init: true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      API_TOKEN: ${LAVALINK_PASSWORD:?Set LAVALINK_PASSWORD in .env}
+      OVERRIDE_PLAYER_VARIANT: IAS
+      MAX_THREADS: "1"
+      PREPROCESSED_CACHE_SIZE: "16"
+      # The image runs as nonroot; /tmp is writable for its player cache.
+      XDG_CACHE_HOME: /tmp
+    expose:
+      - "8001"
+
+  lavalink-plugins-init:
+    image: ghcr.io/lavalink-devs/lavalink:4.2.2
+    platform: linux/amd64
+    user: "0:0"
+    restart: "no"
+    network_mode: none
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - chown -R lavalink:lavalink /opt/Lavalink/plugins && chmod u+rwx /opt/Lavalink/plugins
+    volumes:
+      - lavalink-plugins:/opt/Lavalink/plugins
+
+  lavalink:
+    image: ghcr.io/lavalink-devs/lavalink:4.2.2
+    platform: linux/amd64
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      LAVALINK_SERVER_PASSWORD: ${LAVALINK_PASSWORD:?Set LAVALINK_PASSWORD in .env}
+      JAVA_TOOL_OPTIONS: -Xms128m -Xmx512m
+    depends_on:
+      lavalink-plugins-init:
+        condition: service_completed_successfully
+      yt-cipher:
+        condition: service_started
+    volumes:
+      - ./lavalink/application.yml:/opt/Lavalink/application.yml:ro
+      - lavalink-plugins:/opt/Lavalink/plugins
+    expose:
+      - "2333"
+
+volumes:
+  lavalink-plugins:

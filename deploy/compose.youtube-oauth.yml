@@ -1,0 +1,10 @@
+# Optional override for YouTube sign-in. See YOUTUBE.md before enabling it.
+# TV handles authenticated playback; WEB is first for metadata and search.
+# TV cannot load metadata, so the plugin skips it during lookups.
+# Spring environment properties override application.yml.
+services:
+  lavalink:
+    environment:
+      PLUGINS_YOUTUBE_CLIENTS: TV,WEB,MUSIC,IOS,ANDROID_VR,WEBEMBEDDED
+      PLUGINS_YOUTUBE_OAUTH_ENABLED: "true"
+      PLUGINS_YOUTUBE_OAUTH_REFRESHTOKEN: ${YOUTUBE_REFRESH_TOKEN:-}
